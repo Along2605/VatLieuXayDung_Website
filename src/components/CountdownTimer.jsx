@@ -1,89 +1,85 @@
-// components/CountdownTimer.jsx
-// Kiến thức: props, conditional styling, component tái sử dụng
+// ============================================================
+// components/CountdownTimer.jsx — Đồng hồ đếm ngược
+//
+// Hiển thị thời gian còn lại để thanh toán (định dạng MM:SS)
+// Màu sắc thay đổi theo mức khẩn cấp:
+//   Xanh lá  → còn nhiều thời gian (> 5 phút)
+//   Vàng     → sắp hết (1–5 phút)
+//   Đỏ       → gần hết / đã hết (< 1 phút)
+//
+// Props:
+//   order    — đơn hàng (cần trường expireAt)
+//   onExpire — hàm gọi khi hết giờ
+// ============================================================
+
 import { useCountdown } from "../hooks/useCountdown";
 
-/**
- * CountdownTimer — hiển thị đồng hồ đếm ngược đến hết hạn đơn hàng
- *
- * @param {object}   order     - đơn hàng có trường expireAt
- * @param {function} onExpire  - callback khi hết giờ
- */
 export default function CountdownTimer({ order, onExpire }) {
+  // Lấy dữ liệu đếm ngược từ custom hook
   const { minutes, seconds, total, isExpired } = useCountdown(order, onExpire);
 
-  // Màu thay đổi theo thời gian còn lại
-  const isUrgent   = total <= 60;   // dưới 1 phút → đỏ
-  const isWarning  = total <= 300;  // dưới 5 phút → vàng
+  // Xác định mức độ khẩn cấp
+  const isUrgent  = total > 0 && total <= 60;   // dưới 1 phút
+  const isWarning = total > 0 && total <= 300;  // dưới 5 phút
 
-  const bgColor = isExpired || isUrgent
-    ? "#fef2f2"
-    : isWarning
-    ? "#fffbeb"
+  // Chọn màu dựa trên mức độ
+  const color =
+    isExpired || isUrgent ? "#dc2626"  // đỏ
+    : isWarning           ? "#d97706"  // vàng
+    : "#16a34a";                       // xanh lá
+
+  const bgColor =
+    isExpired || isUrgent ? "#fef2f2"
+    : isWarning           ? "#fffbeb"
     : "#f0fdf4";
 
-  const borderColor = isExpired || isUrgent
-    ? "#fca5a5"
-    : isWarning
-    ? "#fcd34d"
+  const borderColor =
+    isExpired || isUrgent ? "#fca5a5"
+    : isWarning           ? "#fcd34d"
     : "#86efac";
 
-  const textColor = isExpired || isUrgent
-    ? "#dc2626"
-    : isWarning
-    ? "#d97706"
-    : "#16a34a";
-
+  // Thêm số 0 phía trước nếu < 10 (VD: 7 → "07")
   const pad = (n) => String(n).padStart(2, "0");
 
   return (
     <div
       className="text-center rounded-3 p-3"
-      style={{
-        background:   bgColor,
-        border:       `2px solid ${borderColor}`,
-        transition:   "all .5s",
-      }}
+      style={{ background: bgColor, border: `2px solid ${borderColor}`, transition: "all .5s" }}
     >
-      <div className="small fw-semibold mb-1" style={{ color: textColor }}>
+      {/* Tiêu đề */}
+      <div className="small fw-semibold mb-1" style={{ color }}>
         <i className="bi bi-clock me-1"></i>
         {isExpired ? "Đơn hàng đã hết hạn" : "Thời gian còn lại để thanh toán"}
       </div>
 
+      {/* Đồng hồ MM:SS */}
       {!isExpired && (
         <div
           className="fw-bold"
-          style={{
-            fontSize:       42,
-            color:          textColor,
-            fontVariantNumeric: "tabular-nums",
-            letterSpacing:  2,
-            lineHeight:     1,
-          }}
+          style={{ fontSize: 42, color, letterSpacing: 2, lineHeight: 1 }}
         >
           {pad(minutes)}
-          <span
-            style={{
-              animation: "blink 1s step-start infinite",
-              display: "inline-block",
-              marginInline: 2,
-            }}
-          >:</span>
+          {/* Dấu : nhấp nháy mỗi giây */}
+          <span style={{ animation: "blink 1s step-start infinite", display: "inline-block", marginInline: 2 }}>
+            :
+          </span>
           {pad(seconds)}
         </div>
       )}
 
-      <div className="small mt-1" style={{ color: textColor, opacity: 0.8 }}>
+      {/* Thông báo phụ */}
+      <div className="small mt-1" style={{ color, opacity: 0.85 }}>
         {isExpired
           ? "Vui lòng đặt lại đơn hàng"
           : isUrgent
-          ? "⚠️ Sắp hết hạn! Vui lòng thanh toán ngay"
+          ? "⚠️ Sắp hết hạn! Thanh toán ngay"
           : isWarning
           ? "Còn ít thời gian, hãy thanh toán sớm"
-          : "Vui lòng hoàn tất thanh toán trước khi hết hạn"
+          : "Vui lòng hoàn tất trước khi hết hạn"
         }
       </div>
 
-      {/* CSS animation cho dấu hai chấm nhấp nháy */}
+      {/* CSS animation cho dấu : nhấp nháy */}
       <style>{`
         @keyframes blink {
           0%, 100% { opacity: 1; }

@@ -1,25 +1,32 @@
-// pages/CartPage.jsx
-// Kiến thức: useNavigate, useAuth (hiển thị tên user), useCart
+// ============================================================
+// pages/CartPage.jsx — Giỏ hàng
+//
+// Hiển thị danh sách sản phẩm đã thêm, cho phép thay đổi số lượng,
+// xóa sản phẩm, và tiến hành thanh toán
+// ============================================================
+
 import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import ProductImage from "../components/ProductImage";
 import CheckoutSteps from "../components/CheckoutSteps";
 
-const formatPrice = (price) =>
-  price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+function formatPrice(price) {
+  return price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+}
 
 export default function CartPage() {
   const { cart, totalItems, totalPrice, removeItem, increaseQty, decreaseQty, clearCart } = useCart();
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user }   = useAuth();
+  const navigate   = useNavigate();
 
+  // Giỏ trống → hiện thông báo
   if (!cart || cart.length === 0) {
     return (
       <div className="container py-5 text-center">
         <i className="bi bi-cart-x" style={{ fontSize: 72, color: "#94a3b8" }}></i>
         <h4 className="mt-3 fw-bold">Giỏ hàng trống</h4>
-        <p className="text-muted">Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm.</p>
+        <p className="text-muted">Hãy thêm sản phẩm để bắt đầu mua sắm.</p>
         <button className="btn btn-primary mt-2" onClick={() => navigate("/products")}>
           Xem sản phẩm ngay
         </button>
@@ -29,9 +36,10 @@ export default function CartPage() {
 
   return (
     <div className="container py-4">
+      {/* Thanh tiến trình bước 1 */}
       <CheckoutSteps current={1} />
 
-      {/* Tiêu đề + thông tin user */}
+      {/* Tiêu đề + info user */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4 className="fw-bold mb-0">
           <i className="bi bi-cart3 me-2"></i>Giỏ hàng ({totalItems} sản phẩm)
@@ -40,32 +48,28 @@ export default function CartPage() {
           <span className="text-muted small">
             <i className="bi bi-person-check text-success me-1"></i>
             Đang mua với tài khoản <strong>{user.fullName}</strong>
-            {user.phone ? (
-              <>
-                {" "}
-                · <span className="text-nowrap">{user.phone}</span>
-              </>
-            ) : null}
           </span>
         )}
       </div>
 
       <div className="row g-4">
-        {/* Danh sách */}
+
+        {/* Danh sách sản phẩm */}
         <div className="col-lg-8">
           {cart.map((item) => (
             <div key={item.id} className="card border-0 shadow-sm mb-3" style={{ borderRadius: 12 }}>
               <div className="card-body">
                 <div className="row align-items-center g-3">
+
                   {/* Ảnh */}
                   <div className="col-3 col-md-2">
                     <div className="d-flex align-items-center justify-content-center rounded"
-                      style={{ background: "#f8fafc", height: 70, overflow: "hidden" }}>
+                      style={{ background: "#f8fafc", height: 70 }}>
                       <ProductImage img={item.img} name={item.name} size={60} />
                     </div>
                   </div>
 
-                  {/* Info */}
+                  {/* Tên + thương hiệu */}
                   <div className="col-9 col-md-4">
                     <h6 className="fw-bold mb-1" style={{ fontSize: 14 }}>{item.name}</h6>
                     <span className="badge bg-light text-secondary" style={{ fontSize: 11 }}>{item.brand}</span>
@@ -74,16 +78,17 @@ export default function CartPage() {
                     </p>
                   </div>
 
-                  {/* Qty */}
+                  {/* Điều chỉnh số lượng */}
                   <div className="col-auto">
                     <div className="input-group input-group-sm" style={{ width: 110 }}>
                       <button className="btn btn-outline-secondary" onClick={() => decreaseQty(item.id)}>−</button>
+                      {/* Hiện số lượng — readOnly, không cho nhập tay */}
                       <span className="form-control text-center fw-bold">{item.qty}</span>
                       <button className="btn btn-outline-secondary" onClick={() => increaseQty(item.id)}>+</button>
                     </div>
                   </div>
 
-                  {/* Tổng + xóa */}
+                  {/* Tổng tiền + xóa */}
                   <div className="col-auto ms-auto text-end">
                     <p className="fw-bold text-primary mb-1">{formatPrice(item.price * item.qty)}</p>
                     <button className="btn btn-link text-danger p-0 small" onClick={() => removeItem(item.id)}>
@@ -95,20 +100,24 @@ export default function CartPage() {
             </div>
           ))}
 
+          {/* Nút hành động */}
           <div className="d-flex gap-2 mt-2">
-            <button className="btn btn-outline-secondary" onClick={() => navigate("/products")}>← Tiếp tục mua</button>
+            <button className="btn btn-outline-secondary" onClick={() => navigate("/products")}>
+              ← Tiếp tục mua
+            </button>
             <button className="btn btn-outline-danger" onClick={clearCart}>
               <i className="bi bi-trash me-1"></i>Xóa toàn bộ
             </button>
           </div>
         </div>
 
-        {/* Tóm tắt */}
+        {/* Tóm tắt đơn hàng */}
         <div className="col-lg-4">
           <div className="card border-0 shadow-sm" style={{ borderRadius: 12 }}>
             <div className="card-body p-4">
               <h5 className="fw-bold mb-4">Tóm tắt đơn hàng</h5>
 
+              {/* Liệt kê từng sản phẩm */}
               {cart.map((item) => (
                 <div key={item.id} className="d-flex justify-content-between small text-muted mb-2">
                   <span className="text-truncate me-2">{item.name} × {item.qty}</span>
@@ -131,7 +140,11 @@ export default function CartPage() {
                 <span style={{ color: "#2563eb" }}>{formatPrice(totalPrice)}</span>
               </div>
 
-              <button className="btn btn-primary w-100 mt-4 py-2 fw-bold" onClick={() => navigate("/checkout")}>
+              {/* Nút thanh toán — navigate sang /checkout */}
+              <button
+                className="btn btn-primary w-100 mt-4 py-2 fw-bold"
+                onClick={() => navigate("/checkout")}
+              >
                 <i className="bi bi-credit-card me-2"></i>Tiến hành thanh toán
               </button>
 

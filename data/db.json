@@ -143,21 +143,6 @@
       "desc": "Thép cuộn Hòa Phát CB240 Φ6."
     },
     {
-      "id": 10,
-      "name": "Thép Cây Việt Mỹ D10 – 11.7m",
-      "price": 185000,
-      "unit": "cây",
-      "category": "thep",
-      "img": "thep-cay-viet-my.png",
-      "brand": "Việt Mỹ",
-      "rating": 4.5,
-      "reviews": 142,
-      "sale": true,
-      "oldPrice": 210000,
-      "stock": 300,
-      "desc": "Thép cây Việt Mỹ D10 chuẩn ASTM."
-    },
-    {
       "id": 11,
       "name": "Thép Cây Hòa Phát D12 CB300 – 11.7m",
       "price": 245000,
