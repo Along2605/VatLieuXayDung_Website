@@ -7,7 +7,7 @@ import BrandIcon from "./BrandIcon";
 
 export default function Header() {
   const { totalItems } = useCart();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdminUser } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -101,6 +101,27 @@ export default function Header() {
                       <i className="bi bi-cart3 me-2"></i>Giỏ hàng
                     </Link>
                   </li>
+                  {/* Menu Admin — chỉ hiện khi là admin */}
+                  {isAdminUser && (
+                    <>
+                      <li><hr className="dropdown-divider my-1" /></li>
+                      <li>
+                        <span className="dropdown-item-text small text-muted fw-semibold" style={{ fontSize: 11 }}>
+                          <i className="bi bi-shield-check me-1 text-primary"></i>QUẢN TRỊ
+                        </span>
+                      </li>
+                      <li>
+                        <Link to="/admin/products" className="dropdown-item small">
+                          <i className="bi bi-box-seam me-2"></i>Quản lý sản phẩm
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/admin/users" className="dropdown-item small">
+                          <i className="bi bi-people me-2"></i>Quản lý người dùng
+                        </Link>
+                      </li>
+                    </>
+                  )}
                   <li><hr className="dropdown-divider my-1" /></li>
                   <li>
                     <button className="dropdown-item text-danger" onClick={handleLogout}>

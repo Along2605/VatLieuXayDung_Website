@@ -1,12 +1,24 @@
 {
   "users": [
     {
+      "id": 1,
       "fullName": "NGUYỄN anh long",
       "email": "nal26052005@gmail.com",
       "phone": "",
-      "password": "Nguyenanhlong123",
-      "createdAt": "2026-04-19T07:36:02.502Z",
-      "id": 1
+      "password": "Nguyenanhlong123@",
+      "role": "customer",
+      "isRoot": false,
+      "createdAt": "2026-04-19T07:36:02.502Z"
+    },
+    {
+      "id": 999,
+      "fullName": "Đức Phiến (Root Admin)",
+      "email": "admin@vlxdducphien.vn",
+      "phone": "0901234999",
+      "password": "Nguyen",
+      "role": "admin",
+      "isRoot": true,
+      "createdAt": "2026-01-01T00:00:00.000Z"
     }
   ]
 }

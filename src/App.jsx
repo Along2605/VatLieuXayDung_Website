@@ -15,6 +15,9 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import { AboutPage, ContactPage } from "./pages/AboutContactPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import AdminProductsPage from "./pages/AdminProductsPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminRoute from "./components/AdminRoute";
 import WaitingPaymentPage from "./pages/WaitingPaymentPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 
@@ -66,6 +69,14 @@ export default function App() {
                 } />
                 <Route path="/order-success" element={
                   <ProtectedRoute><OrderSuccessPage /></ProtectedRoute>
+                } />
+
+                {/* Admin routes — chỉ admin được vào */}
+                <Route path="/admin/products" element={
+                  <AdminRoute><AdminProductsPage /></AdminRoute>
+                } />
+                <Route path="/admin/users" element={
+                  <AdminRoute><AdminUsersPage /></AdminRoute>
                 } />
 
                 {/* 404 fallback */}
