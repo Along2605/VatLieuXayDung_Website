@@ -53,21 +53,6 @@
       "desc": "Xi măng INSEE nhập khẩu, độ bền cao, chống thấm tốt."
     },
     {
-      "id": 3,
-      "name": "Xi Măng Nghi Sơn PCB40 – 50kg",
-      "price": 92000,
-      "unit": "túi",
-      "category": "xi-mang",
-      "img": "xi-mang-ha-tien.png",
-      "brand": "Nghi Sơn",
-      "rating": 4.7,
-      "reviews": 356,
-      "sale": true,
-      "oldPrice": 105000,
-      "stock": 180,
-      "desc": "Xi măng Nghi Sơn PCB40, độ mịn cao, phù hợp trộn bê tông."
-    },
-    {
       "id": 4,
       "name": "Xi Măng SCG PCB40 – 50kg",
       "price": 105000,
