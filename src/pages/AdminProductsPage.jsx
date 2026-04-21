@@ -50,15 +50,18 @@ export default function AdminProductsPage() {
   async function fetchData() {
     setFetching(true);
     try {
+      // Đọc từ json-server API (db.json) — không dùng file tĩnh
+      // vì file tĩnh không cập nhật khi CRUD
       const [pRes, cRes] = await Promise.all([
-        fetch("/data/products.json"),
-        fetch("/data/products.json"),
+        fetch("/api/products"),
+        fetch("/api/categories"),
       ]);
-      const pData = await pRes.json();
-      setProducts(pData.products   || []);
-      setCategories((pData.categories || []).filter((c) => c.id !== "all"));
+      const products   = await pRes.json();
+      const categories = await cRes.json();
+      setProducts(products);
+      setCategories(categories.filter((c) => c.id !== "all"));
     } catch {
-      showToast("error", "Không tải được dữ liệu.");
+      showToast("error", "Không tải được dữ liệu. Hãy chắc json-server đang chạy.");
     } finally {
       setFetching(false);
     }

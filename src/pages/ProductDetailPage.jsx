@@ -1,8 +1,7 @@
 // pages/ProductDetailPage.jsx
-// Kiến thức: useNavigate, useParams (id từ URL), useFetch, useCart
-import { useState } from "react";
+// Sửa: đọc sản phẩm liên quan từ /api thay vì file tĩnh
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useFetch } from "../hooks/useFetch";
 import { useCart } from "../context/CartContext";
 import ProductImage from "../components/ProductImage";
 
@@ -12,9 +11,19 @@ const formatPrice = (price) =>
 export default function ProductDetailPage({ product, onSelectRelated }) {
   const { addToCart } = useCart();
   const navigate = useNavigate();
-  const { data } = useFetch("/data/products.json");
-  const [qty, setQty]     = useState(1);
+
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [qty,   setQty]   = useState(1);
   const [added, setAdded] = useState(false);
+
+  // Lấy sản phẩm liên quan từ API — cập nhật theo db.json thật
+  useEffect(() => {
+    if (!product?.category) return;
+    fetch(`/api/products?category=${product.category}`)
+      .then((res) => res.ok ? res.json() : [])
+      .then((all) => setRelatedProducts(all.filter((p) => p.id !== product.id).slice(0, 4)))
+      .catch(() => {});
+  }, [product?.id, product?.category]);
 
   if (!product) {
     return (
@@ -24,11 +33,6 @@ export default function ProductDetailPage({ product, onSelectRelated }) {
       </div>
     );
   }
-
-  const allProducts     = data?.products || [];
-  const relatedProducts = allProducts
-    .filter((item) => item.category === product.category && item.id !== product.id)
-    .slice(0, 4);
 
   const handleAddToCart = () => {
     for (let i = 0; i < qty; i++) addToCart(product);

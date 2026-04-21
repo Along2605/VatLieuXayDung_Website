@@ -1,18 +1,44 @@
 // pages/ProductsPage.jsx
-// Kiến thức: useNavigate, useFetch, useState
-import { useState } from "react";
+// Kiến thức: useNavigate, useState, useEffect, fetch API
+// Sửa: đọc từ /api thay vì file tĩnh → cập nhật ngay khi admin thêm/sửa/xóa
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useFetch } from "../hooks/useFetch";
 import ProductCard from "../components/ProductCard";
 import BrandIcon from "../components/BrandIcon";
 
 export default function ProductsPage({ setSelectedProduct }) {
   const navigate = useNavigate();
-  const { data, loading, error } = useFetch("/data/products.json");
 
-  const [searchTerm,   setSearchTerm]   = useState("");
-  const [selectedCat,  setSelectedCat]  = useState("all");
-  const [sortBy,       setSortBy]       = useState("default");
+  const [products,   setProducts]   = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState(null);
+
+  const [searchTerm,  setSearchTerm]  = useState("");
+  const [selectedCat, setSelectedCat] = useState("all");
+  const [sortBy,      setSortBy]      = useState("default");
+
+  // Đọc từ json-server API — luôn phản ánh db.json mới nhất
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch("/api/products"),
+      fetch("/api/categories"),
+    ])
+      .then(async ([pRes, cRes]) => {
+        if (!pRes.ok) throw new Error("Không tải được sản phẩm");
+        if (!cRes.ok) throw new Error("Không tải được danh mục");
+        const products   = await pRes.json();
+        const categories = await cRes.json();
+        setProducts(products);
+        // Thêm "Tất cả" lên đầu nếu chưa có
+        const hasAll = categories.some((c) => c.id === "all");
+        setCategories(hasAll ? categories : [{ id: "all", label: "Tất cả", icon: "grid" }, ...categories]);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSelect = (product) => {
     setSelectedProduct(product);
@@ -29,14 +55,13 @@ export default function ProductsPage({ setSelectedProduct }) {
   if (error) return (
     <div className="container py-5 text-center">
       <div className="alert alert-danger d-inline-block">
-        <i className="bi bi-exclamation-triangle me-2"></i>Lỗi: {error}
+        <i className="bi bi-exclamation-triangle me-2"></i>{error}
+        <div className="mt-2 small">Hãy chắc chắn <code>json-server</code> đang chạy (<code>npm run dev</code>)</div>
       </div>
     </div>
   );
 
-  const products   = data?.products   || [];
-  const categories = data?.categories || [];
-
+  // Lọc + sắp xếp
   let filtered = products.filter((item) => {
     const matchCat    = selectedCat === "all" || item.category === selectedCat;
     const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -52,10 +77,13 @@ export default function ProductsPage({ setSelectedProduct }) {
       <h2 className="text-center fw-bold mb-1">Vật Liệu Xây Dựng</h2>
       <p className="text-center text-muted mb-4">Chất lượng đảm bảo – Giao hàng toàn quốc</p>
 
+      {/* Tìm kiếm + sắp xếp */}
       <div className="row g-2 mb-4">
         <div className="col-md-8">
           <div className="input-group">
-            <span className="input-group-text bg-white"><i className="bi bi-search text-muted"></i></span>
+            <span className="input-group-text bg-white">
+              <i className="bi bi-search text-muted"></i>
+            </span>
             <input
               type="text" className="form-control"
               placeholder="Tìm kiếm sản phẩm..."
@@ -76,6 +104,7 @@ export default function ProductsPage({ setSelectedProduct }) {
         </div>
       </div>
 
+      {/* Danh mục */}
       <div className="d-flex flex-wrap gap-2 mb-4">
         {categories.map((cat) => (
           <button
@@ -89,7 +118,9 @@ export default function ProductsPage({ setSelectedProduct }) {
         ))}
       </div>
 
-      <p className="text-muted small mb-3">Hiển thị <strong>{filtered.length}</strong> sản phẩm</p>
+      <p className="text-muted small mb-3">
+        Hiển thị <strong>{filtered.length}</strong> sản phẩm
+      </p>
 
       {filtered.length > 0 ? (
         <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4">
