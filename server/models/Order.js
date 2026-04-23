@@ -48,8 +48,10 @@ const Order = {
       totalAmount,
       payment,
       userId || null,
-      // expireAt từ frontend là ISO string, MySQL cần datetime
-      new Date(expireAt).toISOString().slice(0, 19).replace('T', ' '),
+      // Truyền Date object cho mysql2 — với timezone:'Z' trong pool config
+      // mysql2 sẽ tự convert sang UTC datetime string khi gửi lên MySQL
+      // KHÔNG manually format string vì sẽ mất thông tin timezone
+      new Date(expireAt),
     ]);
 
     return Order.getById(orderId);
@@ -79,9 +81,9 @@ const Order = {
     if (order.status === 'paid') return { ok: false, error: 'Đơn hàng đã được xác nhận.' };
     if (order.status === 'cancelled') return { ok: false, error: 'Đơn hàng đã bị huỷ.' };
 
-    // Kiểm tra hết hạn ở server — không tin hoàn toàn vào frontend
+    // Kiểm tra hết hạn ở server
+    // mysql2 với timezone:'Z' → expire_at là Date object UTC → so sánh đúng
     if (new Date() > new Date(order.expire_at)) {
-      // Tự động cancel đơn hết hạn
       await pool.query(
         "UPDATE orders SET status = 'cancelled' WHERE order_id = ?",
         [orderId]
@@ -143,13 +145,15 @@ const Order = {
   // ── TỰ ĐỘNG HUỶ CÁC ĐƠN HẾT HẠN ─────────────────────────────────────────
   // Gọi định kỳ hoặc trước khi trả kết quả cho client
   cancelExpired: async () => {
+    // UTC_TIMESTAMP() trả về giờ UTC — nhất quán với expire_at lưu theo UTC
+    // Không dùng NOW() vì NOW() phụ thuộc timezone của MySQL server
     const [result] = await pool.query(`
       UPDATE orders
       SET status = 'cancelled'
       WHERE status = 'pending'
-        AND expire_at < NOW()
+        AND expire_at < UTC_TIMESTAMP()
     `);
-    return result.affectedRows; // số đơn bị huỷ
+    return result.affectedRows;
   },
 };
 

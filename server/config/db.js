@@ -32,8 +32,10 @@ const pool = mysql.createPool({
     return next();
   },
 
-  // Hỗ trợ múi giờ VN (UTC+7)
-  timezone: '+07:00',
+  // KHÔNG set timezone ở đây để driver dùng UTC xuyên suốt
+  // Nếu set '+07:00', driver sẽ interpret datetime lưu vào DB theo UTC+7
+  // → expire_at bị lệch 7 giờ → cancelExpired() huỷ đơn ngay lập tức
+  timezone: 'Z',  // 'Z' = UTC, nhất quán với ISO string từ JavaScript
 });
 
 // Test kết nối khi server khởi động
