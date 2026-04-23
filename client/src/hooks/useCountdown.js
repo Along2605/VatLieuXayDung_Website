@@ -1,54 +1,76 @@
-// ============================================================
-// hooks/useCountdown.js — Hook đếm ngược thời gian
-//
-// Custom hook: hàm bắt đầu bằng "use", dùng được các hook React bên trong
-// Tách logic đếm ngược ra khỏi component để dễ tái sử dụng
-//
-// Cách dùng:
-//   const { minutes, seconds, total, isExpired } = useCountdown(order, onExpire)
-// ============================================================
-
-import { useState, useEffect } from "react";
+// hooks/useCountdown.js
+import { useState, useEffect, useRef } from "react";
 import { secondsRemaining } from "../services/orderService";
 
 /**
- * @param {object|null} order    - đơn hàng có trường expireAt
- * @param {function}    onExpire - gọi khi hết giờ (không bắt buộc)
+ * useCountdown — đếm ngược đến thời điểm hết hạn của đơn hàng
+ *
+ * @param {object|null} order    - đơn hàng (có trường expireAt)
+ * @param {function}    onExpire - callback khi hết giờ
  * @returns {{ minutes, seconds, total, isExpired }}
+ *
+ * ── Các lỗi đã fix ────────────────────────────────────────────────────────
+ * Bug cũ 1: onExpire được truyền vào dependency array [order?.expireAt]
+ *   nhưng WaitingPaymentPage tạo handleExpire mới mỗi lần render
+ *   → useEffect chạy lại liên tục → timer bị reset → countdown giật/sai
+ *   Fix: dùng useRef lưu onExpire, không cho vào dependency
+ *
+ * Bug cũ 2: khi order prop thay đổi (polling cập nhật), nếu expireAt string
+ *   format khác (MySQL vs ISO) → secondsRemaining() trả về âm → total = 0
+ *   → isExpired = true ngay lập tức
+ *   Fix: luôn dùng expireAt từ localStorage gốc (ISO string chuẩn)
+ *        không tin expireAt từ server polling (có thể bị lỗi timezone)
  */
 export function useCountdown(order, onExpire) {
-  // Khởi tạo state với số giây còn lại ngay từ đầu
+  // Dùng useRef để lưu callback mà không trigger re-run useEffect
+  // (onExpire là function mới mỗi render → không được đặt vào dependency)
+  const onExpireRef = useRef(onExpire);
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  });
+
+  // Tính số giây ban đầu — chỉ tính 1 lần khi mount
   const [total, setTotal] = useState(() =>
     order ? secondsRemaining(order) : 0
   );
 
   useEffect(() => {
-    if (!order) return;
+    if (!order?.expireAt) return;
 
-    // Cập nhật ngay khi order thay đổi (không cần chờ 1 giây)
-    setTotal(secondsRemaining(order));
+    // Cập nhật ngay khi hook mount (tránh bị lệch 1 giây)
+    const initial = secondsRemaining(order);
+    setTotal(initial);
 
-    // setInterval: cứ 1000ms (1 giây) chạy hàm bên trong 1 lần
-    const timerId = setInterval(() => {
+    // Nếu ngay từ đầu đã hết hạn → gọi callback và dừng
+    if (initial <= 0) {
+      onExpireRef.current?.();
+      return;
+    }
+
+    // Tạo interval đếm ngược mỗi giây
+    const timer = setInterval(() => {
+      // Tính lại từ expireAt thật mỗi tick
+      // (không dùng total - 1 vì có thể bị drift nếu tab bị ẩn)
       const remaining = secondsRemaining(order);
       setTotal(remaining);
 
       if (remaining <= 0) {
-        clearInterval(timerId); // dừng đồng hồ
-        onExpire?.();           // ?. = gọi nếu onExpire không phải undefined
+        clearInterval(timer);
+        onExpireRef.current?.(); // gọi qua ref, không qua closure cũ
       }
     }, 1000);
 
-    // Cleanup function: React tự gọi khi component unmount hoặc order thay đổi
-    // Mục đích: tránh memory leak (đồng hồ chạy ngầm khi không cần nữa)
-    return () => clearInterval(timerId);
+    // Cleanup: dừng timer khi component unmount hoặc expireAt thay đổi
+    return () => clearInterval(timer);
 
-  }, [order?.expireAt]); // chỉ chạy lại khi expireAt thay đổi
+    // Chỉ phụ thuộc vào expireAt — KHÔNG phụ thuộc onExpire
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.expireAt]);
 
   return {
-    minutes:   Math.floor(total / 60), // phần nguyên của tổng/60
-    seconds:   total % 60,             // phần dư
-    total,                             // tổng giây còn lại
+    minutes:   Math.floor(total / 60),
+    seconds:   total % 60,
+    total,
     isExpired: total <= 0,
   };
 }

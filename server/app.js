@@ -38,6 +38,7 @@ app.use('/api/products',   require('./routes/productRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/auth',       require('./routes/authRoutes'));
 app.use('/api/users',      require('./routes/userRoutes'));
+app.use('/api/orders',     require('./routes/orderRoutes')); // đơn hàng
 
 // ── HEALTH CHECK ──────────────────────────────────────────────────────────────
 // Endpoint kiểm tra server có đang chạy không

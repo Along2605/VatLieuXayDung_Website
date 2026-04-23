@@ -1,135 +1,136 @@
 // ============================================================
-// services/orderService.js — Xử lý logic đơn hàng
+// src/services/orderService.js — Logic đơn hàng
 //
-// "Service" là file tách riêng các hàm nghiệp vụ ra khỏi component
-// để component chỉ lo phần giao diện, không phải lo logic phức tạp.
+// Thay đổi so với phiên bản cũ (chỉ dùng localStorage):
+//   - saveOrderToDB: MỚI → POST /api/orders để lưu vào MySQL
+//   - pollOrderStatus: CẬP NHẬT → GET /api/orders/:id mỗi 3s
+//   - localStorage vẫn dùng để lưu tạm (dự phòng, OrderSuccessPage đọc)
 //
-// File này làm 4 việc:
-//   1. Tạo đơn hàng (createOrder)
-//   2. Lưu/đọc/xóa đơn trong localStorage
-//   3. Kiểm tra hết hạn (15 phút)
-//   4. Gửi đơn lên n8n webhook → n8n nhắn Telegram cho admin
-//   5. Polling: cứ 5 giây kiểm tra đơn có được xác nhận chưa
+// Luồng đầy đủ:
+//   1. CheckoutPage bấm "Đặt hàng"
+//      → createOrder() tạo object
+//      → saveOrderToStorage() lưu localStorage
+//      → saveOrderToDB() lưu MySQL qua POST /api/orders
+//      → sendOrderToN8n() gửi Telegram cho admin
+//      → navigate /waiting-payment
+//
+//   2. WaitingPaymentPage mount
+//      → pollOrderStatus() GET /api/orders/:id mỗi 3 giây
+//
+//   3. Admin nhắn "ok DH123" trên Telegram
+//      → n8n Code JS trích xuất orderId
+//      → n8n HTTP Request: PATCH /api/orders/DH123/confirm
+//      → MySQL: status = "paid"
+//
+//   4. Lần poll tiếp theo frontend nhận status = "paid"
+//      → clearInterval → navigate /order-success
 // ============================================================
 
-// ── CẤU HÌNH ─────────────────────────────────────────────────────────────────
-
-// TODO: Thay bằng URL webhook n8n thật của bạn
 const N8N_WEBHOOK_URL =
-  "https://say-hi-jimmy.app.n8n.cloud/webhook/7483a7aa-7d9b-40bc-af19-2361d2ee6cfe";
+  'https://say-hi-jimmy.app.n8n.cloud/webhook/7483a7aa-7d9b-40bc-af19-2361d2ee6cfe';
 
-// 15 phút tính bằng milliseconds (1 phút = 60.000ms)
-const ORDER_EXPIRE_MS = 15 * 60 * 1000;
+const API_BASE        = '/api';                // Vite proxy → localhost:5000
+const ORDER_EXPIRE_MS = 15 * 60 * 1000;        // 15 phút
+const LS_KEY          = 'vlxd_pending_order';  // key trong localStorage
 
-// Tên key lưu trong localStorage
-const LS_KEY = "vlxd_pending_order";
-
-// ── 1. TẠO ĐƠN HÀNG ──────────────────────────────────────────────────────────
-
-/**
- * Tạo object đơn hàng từ dữ liệu form + giỏ hàng
- *
- * @param {object} form - { fullName, phone, address, note, payment }
- * @param {Array}  cart - mảng sản phẩm từ CartContext
- * @param {number} totalPrice - tổng tiền
- * @param {number} totalItems - tổng số lượng
- * @returns {object} order
- */
-export function createOrder(form, cart, totalPrice, totalItems) {
-  const now = Date.now(); // timestamp hiện tại (số)
-
+// ── TẠO ĐỐI TƯỢNG ORDER ───────────────────────────────────────────────────────
+export function createOrder(form, cart, totalPrice, totalItems, userId = null) {
+  const now = Date.now();
   return {
-    orderId:     "DH" + now,   // VD: DH1718000000000 — mã đơn duy nhất
+    orderId:     'DH' + now,
     customer: {
       fullName: form.fullName.trim(),
       phone:    form.phone.trim(),
       address:  form.address.trim(),
-      note:     form.note.trim(),
+      note:     form.note?.trim() || '',
     },
-    items:       cart,         // danh sách sản phẩm [{ id, name, price, qty }]
+    items:       cart,
     totalItems,
     totalAmount: totalPrice,
-    payment:     form.payment, // "cod" | "bank" | "momo"
-    status:      "pending",    // trạng thái: pending → paid → done
-    createdAt:   new Date(now).toISOString(),               // thời điểm tạo
-    expireAt:    new Date(now + ORDER_EXPIRE_MS).toISOString(), // hết hạn sau 15 phút
+    payment:     form.payment,
+    status:      'pending',
+    userId,
+    createdAt:   new Date(now).toISOString(),
+    expireAt:    new Date(now + ORDER_EXPIRE_MS).toISOString(),
   };
 }
 
-// ── 2. LOCALSTORAGE ───────────────────────────────────────────────────────────
-// localStorage là bộ nhớ của trình duyệt, lưu dữ liệu dạng chuỗi text
-// JSON.stringify: object → chuỗi để lưu
-// JSON.parse: chuỗi → object để đọc
-
-/** Lưu đơn hàng vào localStorage */
+// ── LOCALSTORAGE ───────────────────────────────────────────────────────────────
 export function saveOrderToStorage(order) {
   localStorage.setItem(LS_KEY, JSON.stringify(order));
 }
 
-/** Đọc đơn hàng từ localStorage, trả về null nếu không có */
 export function loadOrderFromStorage() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null; // nếu dữ liệu bị hỏng → trả null
-  }
+  } catch { return null; }
 }
 
-/** Cập nhật trạng thái đơn hàng trong localStorage */
-export function updateOrderStatus(orderId, status) {
-  const order = loadOrderFromStorage();
-  if (order && order.orderId === orderId) {
-    const updated = { ...order, status }; // copy order, đổi status
-    saveOrderToStorage(updated);
-    return updated;
-  }
-  return null;
-}
-
-/** Xóa đơn hàng khỏi localStorage */
 export function clearOrderFromStorage() {
   localStorage.removeItem(LS_KEY);
 }
 
-// ── 3. KIỂM TRA HẾT HẠN ──────────────────────────────────────────────────────
-
-/** Trả về true nếu đơn hàng đã quá 15 phút */
+// ── KIỂM TRA HẾT HẠN (client-side, dự phòng) ─────────────────────────────────
 export function isOrderExpired(order) {
   if (!order?.expireAt) return true;
-  // So sánh thời điểm hiện tại với thời điểm hết hạn
   return Date.now() > new Date(order.expireAt).getTime();
 }
 
-/** Trả về số giây còn lại (tối thiểu 0) */
 export function secondsRemaining(order) {
   if (!order?.expireAt) return 0;
   const diff = new Date(order.expireAt).getTime() - Date.now();
   return Math.max(0, Math.floor(diff / 1000));
 }
 
-// ── 4. GỬI N8N WEBHOOK ───────────────────────────────────────────────────────
-// n8n là công cụ automation: nhận webhook → gửi Telegram cho admin
-// Admin nhắn "ok DH123" → n8n gọi lại để xác nhận đơn → frontend cập nhật
-
+// ── LƯU ORDER VÀO DATABASE (MỚI) ─────────────────────────────────────────────
 /**
- * Gửi thông tin đơn hàng đến n8n
- * Dùng "fire & forget" — không chờ kết quả, không chặn luồng mua hàng
+ * POST /api/orders → Express → MySQL
+ * Gọi ngay sau saveOrderToStorage()
+ *
+ * @param {object} order - object từ createOrder()
+ * @returns {Promise<boolean>}
  */
-export async function sendOrderToN8n(order) {
+export async function saveOrderToDB(order) {
   try {
-    const res = await fetch(N8N_WEBHOOK_URL, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch(`${API_BASE}/orders`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         orderId:     order.orderId,
         customer:    order.customer,
-        // Chỉ gửi thông tin cần thiết, không gửi toàn bộ
         items: order.items.map((i) => ({
-          name:  i.name,
-          qty:   i.qty,
-          price: i.price,
+          id: i.id, name: i.name, price: i.price, qty: i.qty, unit: i.unit,
         })),
+        totalItems:  order.totalItems,
+        totalAmount: order.totalAmount,
+        payment:     order.payment,
+        userId:      order.userId,
+        expireAt:    order.expireAt,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[orderService] Lưu DB thất bại:', err.error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[orderService] Không kết nối được server:', err.message);
+    return false;
+  }
+}
+
+// ── GỬI N8N WEBHOOK ───────────────────────────────────────────────────────────
+export async function sendOrderToN8n(order) {
+  try {
+    const res = await fetch(N8N_WEBHOOK_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId:     order.orderId,
+        customer:    order.customer,
+        items: order.items.map((i) => ({ name: i.name, qty: i.qty, price: i.price })),
         totalAmount: order.totalAmount,
         payment:     order.payment,
         createdAt:   order.createdAt,
@@ -138,50 +139,63 @@ export async function sendOrderToN8n(order) {
     });
     return res.ok;
   } catch (err) {
-    // Nếu n8n chưa cấu hình hoặc mất mạng → in cảnh báo nhưng không báo lỗi cho user
-    console.warn("[orderService] Không gửi được webhook:", err.message);
+    console.warn('[orderService] Không gửi được n8n:', err.message);
     return false;
   }
 }
 
-// ── 5. POLLING TRẠNG THÁI ────────────────────────────────────────────────────
-// Polling: cứ mỗi N giây, tự động kiểm tra trạng thái đơn hàng
-// Khi admin xác nhận → n8n cập nhật localStorage → polling phát hiện → chuyển trang
-
+// ── POLLING TRẠNG THÁI TỪ DATABASE (CẬP NHẬT) ────────────────────────────────
 /**
- * Bắt đầu polling kiểm tra trạng thái đơn hàng
+ * Gọi GET /api/orders/:orderId mỗi intervalMs milliseconds
+ * Khi n8n PATCH /api/orders/:id/confirm → MySQL status = "paid"
+ * → Lần poll tiếp theo nhận được status = "paid" → gọi onPaid()
  *
- * @param {string}   orderId     - mã đơn cần theo dõi
- * @param {function} onPaid      - callback khi đơn được xác nhận thanh toán
- * @param {function} onExpired   - callback khi đơn hết hạn
- * @param {number}   intervalMs  - kiểm tra mỗi bao nhiêu ms (mặc định 5000 = 5 giây)
- * @returns {number} timerId - để gọi clearInterval(timerId) khi cần dừng
+ * @param {string}   orderId
+ * @param {function} onPaid      - gọi khi status = "paid"
+ * @param {function} onExpired   - gọi khi status = "cancelled" hoặc hết hạn
+ * @param {number}   intervalMs  - mặc định 3000ms
+ * @returns {number} timerId
  */
-export function pollOrderStatus(orderId, onPaid, onExpired, intervalMs = 5000) {
-  const timerId = setInterval(() => {
-    const order = loadOrderFromStorage();
+export function pollOrderStatus(orderId, onPaid, onExpired, intervalMs = 3000) {
+  const timerId = setInterval(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/${orderId}`);
 
-    // Không có đơn hoặc sai mã → dừng polling
-    if (!order || order.orderId !== orderId) {
-      clearInterval(timerId);
-      return;
-    }
+      if (res.status === 404) {
+        // Đơn không tồn tại trong DB → dừng poll
+        clearInterval(timerId);
+        return;
+      }
+      if (!res.ok) return; // lỗi tạm thời → thử lại lần sau
 
-    // Hết hạn 15 phút → xóa đơn và báo về component
-    if (isOrderExpired(order)) {
-      clearInterval(timerId);
-      clearOrderFromStorage();
-      onExpired();
-      return;
-    }
+      const data = await res.json();
+      // data = { orderId, status, totalAmount, expireAt, createdAt }
 
-    // Admin đã xác nhận → báo về component
-    if (order.status === "paid") {
-      clearInterval(timerId);
-      onPaid(order);
+      if (data.status === 'paid') {
+        // ✅ Admin đã xác nhận → cập nhật localStorage rồi chuyển trang
+        clearInterval(timerId);
+        const local = loadOrderFromStorage();
+        if (local) saveOrderToStorage({ ...local, status: 'paid' });
+        onPaid(data);
+        return;
+      }
+
+      if (data.status === 'cancelled') {
+        // ❌ Server đã huỷ (hết hạn) → dừng, báo expired
+        clearInterval(timerId);
+        clearOrderFromStorage();
+        onExpired();
+        return;
+      }
+
+      // KHÔNG dùng data.expireAt để kiểm tra thêm ở đây
+      // Lý do: server đã chạy cancelExpired() trước khi trả response
+      // Nếu đơn hết hạn → status đã là "cancelled" → đã xử lý ở trên rồi
+      // Việc tự parse expireAt ở client dễ bị lỗi múi giờ
+    } catch {
+      // Mất mạng → im lặng, thử lại lần sau
     }
   }, intervalMs);
 
-  // Trả về timerId để component gọi clearInterval(timerId) khi unmount
   return timerId;
 }
