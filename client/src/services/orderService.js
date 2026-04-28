@@ -27,7 +27,7 @@
 // ============================================================
 
 const N8N_WEBHOOK_URL =
-  'https://say-hi-jimmy.app.n8n.cloud/webhook/7483a7aa-7d9b-40bc-af19-2361d2ee6cfe';
+  'http://localhost:5678/webhook/vlxd-order'; // n8n local Docker
 
 const API_BASE        = '/api';                // Vite proxy → localhost:5000
 const ORDER_EXPIRE_MS = 15 * 60 * 1000;        // 15 phút

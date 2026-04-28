@@ -13,7 +13,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 /** Webhook n8n nhận form liên hệ */
-const CONTACT_WEBHOOK = "https://say-hi-jimmy.app.n8n.cloud/webhook/contact";
+const CONTACT_WEBHOOK = "http://localhost:5678/webhook/vlxd-contact"; // n8n local Docker
 
 /**
  * Tọa độ cửa hàng VLXD Đức Phiến

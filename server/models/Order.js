@@ -97,6 +97,22 @@ const Order = {
       [orderId]
     );
 
+    // Trừ tồn kho từng sản phẩm trong đơn
+    // order.items là JSON array: [{ id, name, price, qty, ... }]
+    // GREATEST(stock - qty, 0): đảm bảo stock không xuống âm
+    const items = typeof order.items === 'string'
+      ? JSON.parse(order.items)
+      : order.items;
+
+    for (const item of items) {
+      await pool.query(
+        `UPDATE products
+         SET stock = GREATEST(stock - ?, 0)
+         WHERE id = ?`,
+        [item.qty, item.id]
+      );
+    }
+
     return { ok: true, order: await Order.getById(orderId) };
   },
 

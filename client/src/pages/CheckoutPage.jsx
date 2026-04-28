@@ -6,7 +6,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import ProductImage from "../components/ProductImage";
 import CheckoutSteps from "../components/CheckoutSteps";
-import { createOrder, saveOrderToStorage, saveOrderToDB, sendOrderToN8n } from "../services/orderService";
+import { createOrder, saveOrderToStorage, sendOrderToN8n } from "../services/orderService";
 
 const formatPrice = (price) =>
   price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
@@ -113,16 +113,15 @@ export default function CheckoutPage() {
       // 2. Lưu vào localStorage (backup + OrderSuccessPage đọc)
       saveOrderToStorage(order);
 
-      // 3. Lưu vào MySQL qua Express (nguồn thật để polling)
-      await saveOrderToDB(order);
-
-      // 4. Gửi n8n webhook (fire & forget — không await)
+      // 3. Gửi lên n8n — n8n sẽ lưu DB + gửi Telegram cho admin
+      // Không gọi saveOrderToDB() trực tiếp vì n8n đã làm điều đó
+      // Nếu gọi cả 2 → trùng orderId → lỗi ER_DUP_ENTRY
       sendOrderToN8n(order);
 
-      // 5. Xoá giỏ hàng
+      // 4. Xoá giỏ hàng
       clearCart();
 
-      // 6. Chuyển sang trang chờ thanh toán
+      // 5. Chuyển sang trang chờ thanh toán
       navigate("/waiting-payment", { replace: true });
     } catch (err) {
       console.error("Lỗi tạo đơn hàng:", err);
