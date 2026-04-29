@@ -8,12 +8,12 @@ import {
   clearOrderFromStorage,
   isOrderExpired,
   pollOrderStatus,
+  saveOrderToStorage,
 } from "../services/orderService";
 
 const formatPrice = (price) =>
   price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-// Thông tin tài khoản theo từng phương thức thanh toán
 const PAYMENT_INFO = {
   bank: {
     icon:  "bi-bank",
@@ -32,7 +32,6 @@ const PAYMENT_INFO = {
       { label: "Tên",           value: "NGUYEN VAN A" },
     ],
   },
-  // COD: không có thông tin tài khoản, không cần chuyển tiền
   cod: {
     icon:  "bi-cash-coin",
     label: "Thanh toán khi nhận hàng (COD)",
@@ -41,13 +40,36 @@ const PAYMENT_INFO = {
 };
 
 export default function WaitingPaymentPage() {
-  const navigate = useNavigate();
-
+  const navigate   = useNavigate();
   const [order,   setOrder]   = useState(() => loadOrderFromStorage());
   const [expired, setExpired] = useState(false);
   const [paid,    setPaid]    = useState(false);
   const [copied,  setCopied]  = useState(false);
-  const pollingRef             = useRef(null);
+  const pollingRef = useRef(null);
+
+  // ── Khai báo callbacks TRƯỚC useEffect ─────────────────────────────────────
+  // Quan trọng: phải khai báo handleExpire và handlePaid TRƯỚC useEffect
+  // vì useEffect dùng chúng làm tham số cho pollOrderStatus.
+  // Nếu khai báo sau, khi useEffect chạy lần đầu chúng vẫn là undefined.
+
+  const handleExpire = useCallback(() => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    clearOrderFromStorage();
+    setExpired(true);
+  }, []);
+
+  const handlePaid = useCallback(() => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    // Đảm bảo localStorage được cập nhật status = paid
+    // trước khi navigate để OrderSuccessPage đọc được
+    const local = loadOrderFromStorage();
+    if (local) {
+      saveOrderToStorage({ ...local, status: "paid" });
+    }
+    setPaid(true);
+    // Delay 1.5s để user thấy animation xác nhận
+    setTimeout(() => navigate("/order-success", { replace: true }), 1500);
+  }, [navigate]);
 
   useEffect(() => {
     const current = loadOrderFromStorage();
@@ -63,37 +85,26 @@ export default function WaitingPaymentPage() {
     }
 
     if (current.status === "paid") {
-      handlePaid(current);
+      handlePaid();
       return;
     }
 
-    // COD: admin vẫn cần xác nhận để trừ kho và chuyển trạng thái
-    // → polling vẫn chạy bình thường
     setOrder(current);
 
+    // Bắt đầu polling mỗi 3 giây
+    // handlePaid và handleExpire đã được khai báo ở trên → không còn undefined
     pollingRef.current = pollOrderStatus(
       current.orderId,
       handlePaid,
       handleExpire,
-      5000
+      3000
     );
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleExpire = useCallback(() => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    clearOrderFromStorage();
-    setExpired(true);
-  }, []);
-
-  const handlePaid = useCallback(() => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    setPaid(true);
-    setTimeout(() => navigate("/order-success", { replace: true }), 1500);
-  }, [navigate]);
 
   function copyToClipboard(text) {
     navigator.clipboard?.writeText(text).then(() => {
@@ -146,8 +157,8 @@ export default function WaitingPaymentPage() {
 
   if (!order) return null;
 
-  const isCOD    = order.payment === "cod";
-  const payInfo  = PAYMENT_INFO[order.payment] || PAYMENT_INFO.bank;
+  const isCOD   = order.payment === "cod";
+  const payInfo = PAYMENT_INFO[order.payment] || PAYMENT_INFO.bank;
 
   return (
     <div className="container py-4">
@@ -166,10 +177,8 @@ export default function WaitingPaymentPage() {
       <div className="row justify-content-center g-4">
         <div className="col-lg-6 col-md-8">
 
-          {/* Countdown — hiện cho tất cả kể cả COD */}
           <CountdownTimer order={order} onExpire={handleExpire} />
 
-          {/* Card thông tin đơn */}
           <div className="card border-0 shadow-sm mt-4" style={{ borderRadius: 12 }}>
             <div className="card-body p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -181,7 +190,6 @@ export default function WaitingPaymentPage() {
                 </span>
               </div>
 
-              {/* Mã đơn — hiện cho tất cả (COD cũng cần mã để admin tra) */}
               <div className="rounded-3 p-3 mb-3 d-flex justify-content-between align-items-center"
                 style={{ background: "#eff6ff", border: "1px dashed #93c5fd" }}>
                 <div>
@@ -203,7 +211,6 @@ export default function WaitingPaymentPage() {
                 </button>
               </div>
 
-              {/* Số tiền */}
               <div className="rounded-3 p-3 mb-3 text-center"
                 style={{ background: "#f0fdf4", border: "1px solid #86efac" }}>
                 <div className="small text-muted mb-1">Tổng tiền đơn hàng</div>
@@ -212,7 +219,6 @@ export default function WaitingPaymentPage() {
                 </div>
               </div>
 
-              {/* Thông tin tài khoản — CHỈ hiện khi KHÔNG phải COD */}
               {!isCOD && payInfo.lines.length > 0 && (
                 <div className="mb-3">
                   <div className="fw-semibold small mb-2">
@@ -229,7 +235,6 @@ export default function WaitingPaymentPage() {
                 </div>
               )}
 
-              {/* Thông tin người nhận */}
               <div className="small text-muted mt-3">
                 <i className="bi bi-person me-1"></i>
                 <strong>{order.customer.fullName}</strong> — {order.customer.phone}
@@ -239,14 +244,11 @@ export default function WaitingPaymentPage() {
             </div>
           </div>
 
-          {/* Hướng dẫn — nội dung khác nhau cho COD và chuyển khoản */}
           <div className="alert alert-info mt-3 small" style={{ borderRadius: 10 }}>
             <div className="fw-bold mb-1">
               <i className="bi bi-info-circle me-1"></i>Hướng dẫn
             </div>
-
             {isCOD ? (
-              // Hướng dẫn riêng cho COD
               <ol className="mb-0 ps-3">
                 <li>Đơn hàng của bạn đã được ghi nhận</li>
                 <li>Chúng tôi sẽ liên hệ xác nhận và sắp xếp giao hàng</li>
@@ -254,7 +256,6 @@ export default function WaitingPaymentPage() {
                 <li>Đơn tự huỷ sau <strong>15 phút</strong> nếu chưa được xác nhận</li>
               </ol>
             ) : (
-              // Hướng dẫn cho chuyển khoản / MoMo
               <ol className="mb-0 ps-3">
                 <li>Chuyển đúng <strong>số tiền</strong> và nội dung: <strong>{order.orderId}</strong></li>
                 <li>Admin kiểm tra và xác nhận trong vài phút</li>
@@ -264,7 +265,6 @@ export default function WaitingPaymentPage() {
             )}
           </div>
 
-          {/* Indicator đang chờ */}
           <div className="text-center mt-3">
             <span className="text-muted small">
               <span className="spinner-grow spinner-grow-sm me-1" style={{ color: "#2563eb" }}

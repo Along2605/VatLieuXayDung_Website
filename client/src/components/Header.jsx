@@ -103,7 +103,7 @@ export default function Header() {
                 >
                   <i className="bi bi-person-circle me-1"></i>
                   {/* Lấy chữ cuối của họ tên (tên riêng) */}
-                  {user.fullName.split(" ").pop()}
+                  {user?.fullName?.split(" ")?.pop() || "Nguyễn Anh Long"}
                 </button>
 
                 {/* Menu dropdown */}
@@ -189,6 +189,8 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+
     </nav>
   );
 }
