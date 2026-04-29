@@ -1,0 +1,235 @@
+{
+  "name": "VLXD - Handle Btn",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.action}}",
+              "value2": "ok"
+            }
+          ]
+        }
+      },
+      "id": "51f5ccf2-b203-4793-aeba-488217b6b86f",
+      "name": "Check Action",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        816,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "7ce7c8ce-3e2d-4708-bcfb-6141d8b988dc",
+      "name": "Telegram Trigger1",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        480,
+        560
+      ],
+      "webhookId": "d94d59dc-0b27-4ae3-840d-9d5deeef1649",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZDTDWmmmqdbKUfDD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json.callback_query.data;\n\nif (!data) return [];\n\nconst [action, order_id] = data.split('_');\n\nreturn [{\n  json: {\n    action,\n    order_id,\n    chat_id: $json.callback_query.from.id,\n    query_id: $json.callback_query.id\n  }\n}];"
+      },
+      "id": "4a9a2602-baca-4829-91b7-94b1e1ca16ed",
+      "name": "Parse Callback1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'http://host.docker.internal:5000/api/orders/' + $json.order_id + '/confirm' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "vlxd-secret-2026"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "292b1595-8cf4-4f37-a459-24784544d10e",
+      "name": "Confirm Order1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1184,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "={{'Da xac nhan don hang ' + $json.order_id}}",
+        "additionalFields": {}
+      },
+      "id": "bec26236-0511-4290-9acf-9abb81a038b0",
+      "name": "Send Confirm1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        656
+      ],
+      "webhookId": "75061bb8-42aa-4c4a-9d86-89c630400323",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZDTDWmmmqdbKUfDD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "={{'Da huy don hang ' + $json.order_id}}",
+        "additionalFields": {}
+      },
+      "id": "7290d326-f7aa-4ba0-8672-6dfb3976c2d5",
+      "name": "Send Cancel1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        432
+      ],
+      "webhookId": "0cd8e6b0-39a2-4a27-8173-18e37975f263",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZDTDWmmmqdbKUfDD",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.action}}",
+              "value2": "ok"
+            }
+          ]
+        }
+      },
+      "id": "a58c8633-fa86-4eed-a65c-e30910079ad3",
+      "name": "Check Action1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        832,
+        560
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Check Action": {
+      "main": [
+        [
+          {
+            "node": "Confirm Order1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Cancel1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Parse Callback1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Callback1": {
+      "main": [
+        [
+          {
+            "node": "Check Action",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Action1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Order1": {
+      "main": [
+        []
+      ]
+    },
+    "Send Confirm1": {
+      "main": [
+        []
+      ]
+    },
+    "Send Cancel1": {
+      "main": [
+        []
+      ]
+    },
+    "Check Action1": {
+      "main": [
+        [
+          {
+            "node": "Send Confirm1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e9000eac-1b28-4102-843a-dacc636d2e07",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b5c380932530fdd0b26b9fff430a6508b7aa4339354a3dd9e5094335620220ad"
+  },
+  "id": "XhsZC2yKchjAXQK9",
+  "tags": []
+}

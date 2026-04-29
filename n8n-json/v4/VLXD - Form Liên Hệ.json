@@ -1,0 +1,80 @@
+{
+  "name": "VLXD - Form Liên Hệ",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -160
+      ],
+      "id": "a1dbc76a-eb96-463f-824f-fc09af877739",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vlxd-contact",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        368,
+        400
+      ],
+      "id": "0c35d718-3729-4301-9654-8e2cf5031553",
+      "name": "Webhook",
+      "webhookId": "70014abb-ede2-4156-b704-025dbacaf1b3"
+    },
+    {
+      "parameters": {
+        "chatId": "8106061759",
+        "text": "=Khach hang: {{$json[\"body\"][\"name\"]}}\nSDT: {{$json[\"body\"][\"phone\"]}}\nEmail: {{$json[\"body\"][\"email\"]}}\nNoi dung: {{$json[\"body\"][\"message\"]}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        592,
+        400
+      ],
+      "id": "490a596a-fa13-406a-948a-de414bae5bba",
+      "name": "Send a text message",
+      "webhookId": "82485447-66a0-4f31-aad7-c265cc6b3841",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZDTDWmmmqdbKUfDD",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "de75a143-91e1-4873-ad11-e543cb9dcbed",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b5c380932530fdd0b26b9fff430a6508b7aa4339354a3dd9e5094335620220ad"
+  },
+  "id": "xtJk0s8pWMbxbVaX",
+  "tags": []
+}

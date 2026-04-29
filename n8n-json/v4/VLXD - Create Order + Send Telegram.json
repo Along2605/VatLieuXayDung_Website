@@ -1,0 +1,130 @@
+{
+  "name": "VLXD - Create Order + Send Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vlxd-order",
+        "options": {}
+      },
+      "id": "048e19a1-53b2-4147-a114-9b4f358d3344",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "1c9fc468-a587-47a4-89e2-afa12e410923"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:5000/api/orders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "vlxd-secret-2026"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  orderId: $json.body.orderId,  \n  customer: $json.body.customer,\n  items: $json.body.items,\n  totalItems: $json.body.items.length,\n  totalAmount: $json.body.totalAmount,\n  payment: $json.body.payment,\n  expireAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()\n}\n}}",
+        "options": {}
+      },
+      "id": "8c11dd07-0c4f-45e5-9e08-10aa2867dd03",
+      "name": "Create Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        208,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "8106061759",
+        "text": "=DON HANG MOI\n\nMa don: {{$json.order.order_id}}\nTong tien: {{$json.order.total_amount}}\nThanh toan: {{$json.order.payment}}\n\nKhach hang: {{$json.order.customer_name}}\nSo dien thoai: {{$json.order.customer_phone}}\nDia chi: {{$json.order.customer_address}}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Xac nhan don",
+                    "additionalFields": {
+                      "callback_data": "={{'ok_' + $json.order.order_id}}"
+                    }
+                  },
+                  {
+                    "text": "Huy don",
+                    "additionalFields": {
+                      "callback_data": "={{'cancel_' + $json.order.order_id}}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "id": "2ab955a8-f24d-4939-9cb4-382273426002",
+      "name": "Send Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ],
+      "webhookId": "24149043-70eb-4949-ba3e-c3596fa1ba1b",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZDTDWmmmqdbKUfDD",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Order": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "76d38fe6-b911-4e0a-883a-91c54ba0bee1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b5c380932530fdd0b26b9fff430a6508b7aa4339354a3dd9e5094335620220ad"
+  },
+  "id": "2DOEdLAWmJcRDzYI",
+  "tags": []
+}
