@@ -1,0 +1,33 @@
+# ============================================================
+# .dockerignore — Loại trừ file không cần thiết khỏi build
+#
+# Giúp Docker build nhanh hơn và image nhỏ hơn
+# ============================================================
+
+# Git
+.git
+.gitignore
+
+# Node modules (sẽ được cài lại trong container)
+node_modules
+client/node_modules
+server/node_modules
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files (truyền qua docker-compose, không copy vào image)
+.env
+.env.local
+.env.*.local
+
+# Build output (sẽ build lại trong container)
+client/dist
+
+# ngrok binary (không cần trong Docker)
+ngrok/
+
+# Docs và misc
+*.md
+.vscode/
