@@ -24,6 +24,16 @@ const pool = mysql.createPool({
   // Số kết nối tối đa trong pool
   connectionLimit: 10,
 
+  // ── QUAN TRỌNG: charset utf8mb4 cho tiếng Việt ──────────────────────────
+  // utf8mb4 hỗ trợ đầy đủ Unicode bao gồm tiếng Việt có dấu
+  // Nếu thiếu → dữ liệu lấy ra bị mất dấu (Xi Mang thay vì Xi Măng)
+  charset: 'utf8mb4',
+
+  // Tự động chạy SET NAMES sau mỗi lần pool tạo kết nối mới
+  // Đảm bảo 100% kết nối dùng utf8mb4, không chỉ kết nối đầu tiên
+  // Đây là cách đúng nhất với mysql2, không cần afterConnect callback
+  multipleStatements: false,
+
   // Tự động chuyển số 0/1 từ MySQL thành false/true trong JavaScript
   typeCast: function(field, next) {
     if (field.type === 'TINY' && field.length === 1) {
@@ -33,22 +43,28 @@ const pool = mysql.createPool({
   },
 
   // KHÔNG set timezone ở đây để driver dùng UTC xuyên suốt
-  // Nếu set '+07:00', driver sẽ interpret datetime lưu vào DB theo UTC+7
-  // → expire_at bị lệch 7 giờ → cancelExpired() huỷ đơn ngay lập tức
-  timezone: 'Z',  // 'Z' = UTC, nhất quán với ISO string từ JavaScript
+  timezone: 'Z',
+});
+
+// ── Đảm bảo mọi kết nối dùng utf8mb4 ───────────────────────────────────────
+// pool.on('connection') chạy mỗi khi pool tạo kết nối MySQL mới
+// → SET NAMES đảm bảo kết nối đó dùng utf8mb4 để đọc/ghi dữ liệu
+pool.on('connection', function(connection) {
+  connection.query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
 });
 
 // Test kết nối khi server khởi động
-// (async IIFE — hàm async tự gọi ngay lập tức)
 (async () => {
   try {
     const conn = await pool.getConnection();
-    console.log('✅ Kết nối MySQL thành công!');
-    conn.release(); // trả kết nối về pool sau khi test xong
+    // Chạy SET NAMES ngay trên kết nối test
+    await conn.execute("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+    console.log('✅ Kết nối MySQL thành công (charset: utf8mb4)!');
+    conn.release();
   } catch (err) {
     console.error('❌ Lỗi kết nối MySQL:', err.message);
     console.error('   Kiểm tra: MySQL đang chạy? user/password đúng? database tồn tại?');
-    process.exit(1); // dừng server nếu không kết nối được DB
+    process.exit(1);
   }
 })();
 
