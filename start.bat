@@ -67,7 +67,7 @@ echo  ==========================================
 echo.
 echo   Frontend  : http://localhost:5173
 echo   Backend   : http://localhost:5000/api/health
-echo   n8n       : http://localhost:5679
+echo   n8n       : http://localhost:5678
 echo   ngrok UI  : http://localhost:4040  (xem public URL)
 echo.
 echo   De xem logs : docker-compose logs -f
