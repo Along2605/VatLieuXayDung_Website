@@ -6,6 +6,8 @@
 
 title VLXD Duc Phien - Docker Startup
 
+cd /d %~dp0
+
 echo.
 echo  ==========================================
 echo   VLXD DUC PHIEN - One-Click Docker Start

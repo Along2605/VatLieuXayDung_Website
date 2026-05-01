@@ -6,7 +6,8 @@
 // ============================================================
 
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
+import { useSelector } from "react-redux";
+import { selectTotalItems } from "../features/cart/cartSlice";
 import { useAuth } from "../context/AuthContext";
 import BrandIcon from "./BrandIcon";
 
@@ -103,7 +104,7 @@ export default function Header() {
                 >
                   <i className="bi bi-person-circle me-1"></i>
                   {/* Lấy chữ cuối của họ tên (tên riêng) */}
-                  {user?.fullName?.split(" ")?.pop() || "Nguyễn Anh Long"}
+                  {user.fullName.split(" ").pop()}
                 </button>
 
                 {/* Menu dropdown */}
@@ -189,8 +190,6 @@ export default function Header() {
           </div>
         </div>
       </div>
-
-
     </nav>
   );
 }

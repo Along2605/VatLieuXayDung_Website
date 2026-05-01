@@ -6,7 +6,11 @@
 // ============================================================
 
 import { useNavigate, Link } from "react-router-dom";
-import { useCart } from "../context/CartContext";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  selectCartItems, selectTotalItems, selectTotalPrice,
+  removeItem, increaseQty, decreaseQty, clearCart,
+} from "../features/cart/cartSlice";
 import { useAuth } from "../context/AuthContext";
 import ProductImage from "../components/ProductImage";
 import CheckoutSteps from "../components/CheckoutSteps";
@@ -16,7 +20,17 @@ function formatPrice(price) {
 }
 
 export default function CartPage() {
-  const { cart, totalItems, totalPrice, removeItem, increaseQty, decreaseQty, clearCart } = useCart();
+  // useSelector: đọc state từ Redux store
+  const cart       = useSelector(selectCartItems);
+  const totalItems = useSelector(selectTotalItems);
+  const totalPrice = useSelector(selectTotalPrice);
+  // useDispatch: gửi action đến Redux store
+  const dispatch   = useDispatch();
+  // Wrap các action với dispatch
+  const handleRemove  = (id)  => dispatch(removeItem(id));
+  const handleIncrease = (id) => dispatch(increaseQty(id));
+  const handleDecrease = (id) => dispatch(decreaseQty(id));
+  const handleClear   = ()    => dispatch(clearCart());
   const { user }   = useAuth();
   const navigate   = useNavigate();
 
@@ -81,17 +95,17 @@ export default function CartPage() {
                   {/* Điều chỉnh số lượng */}
                   <div className="col-auto">
                     <div className="input-group input-group-sm" style={{ width: 110 }}>
-                      <button className="btn btn-outline-secondary" onClick={() => decreaseQty(item.id)}>−</button>
+                      <button className="btn btn-outline-secondary" onClick={() => handleDecrease(item.id)}>−</button>
                       {/* Hiện số lượng — readOnly, không cho nhập tay */}
                       <span className="form-control text-center fw-bold">{item.qty}</span>
-                      <button className="btn btn-outline-secondary" onClick={() => increaseQty(item.id)}>+</button>
+                      <button className="btn btn-outline-secondary" onClick={() => handleIncrease(item.id)}>+</button>
                     </div>
                   </div>
 
                   {/* Tổng tiền + xóa */}
                   <div className="col-auto ms-auto text-end">
                     <p className="fw-bold text-primary mb-1">{formatPrice(item.price * item.qty)}</p>
-                    <button className="btn btn-link text-danger p-0 small" onClick={() => removeItem(item.id)}>
+                    <button className="btn btn-link text-danger p-0 small" onClick={() => handleRemove(item.id)}>
                       <i className="bi bi-trash me-1"></i>Xóa
                     </button>
                   </div>
@@ -105,7 +119,7 @@ export default function CartPage() {
             <button className="btn btn-outline-secondary" onClick={() => navigate("/products")}>
               ← Tiếp tục mua
             </button>
-            <button className="btn btn-outline-danger" onClick={clearCart}>
+            <button className="btn btn-outline-danger" onClick={handleClear}>
               <i className="bi bi-trash me-1"></i>Xóa toàn bộ
             </button>
           </div>

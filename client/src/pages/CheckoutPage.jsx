@@ -2,7 +2,8 @@
 // Kiến thức: useState, useNavigate, controlled inputs, form validation, useCart, useAuth
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useCart } from "../context/CartContext";
+import { useSelector, useDispatch } from "react-redux";
+import { selectCartItems, selectTotalItems, selectTotalPrice, clearCart } from "../features/cart/cartSlice";
 import { useAuth } from "../context/AuthContext";
 import ProductImage from "../components/ProductImage";
 import CheckoutSteps from "../components/CheckoutSteps";
@@ -39,7 +40,12 @@ const PAYMENT_METHODS = [
 ];
 
 export default function CheckoutPage() {
-  const { cart, totalItems, totalPrice, clearCart } = useCart();
+  const cart       = useSelector(selectCartItems);
+  const totalItems = useSelector(selectTotalItems);
+  const totalPrice = useSelector(selectTotalPrice);
+  const dispatch   = useDispatch();
+  // clearCart: gọi qua dispatch thay vì lấy từ context
+  const handleClearCart = () => dispatch(clearCart());
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -119,7 +125,7 @@ export default function CheckoutPage() {
       sendOrderToN8n(order);
 
       // 4. Xoá giỏ hàng
-      clearCart();
+      handleClearCart();
 
       // 5. Chuyển sang trang chờ thanh toán
       navigate("/waiting-payment", { replace: true });

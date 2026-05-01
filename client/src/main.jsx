@@ -1,28 +1,29 @@
 // ============================================================
 // main.jsx — Điểm khởi chạy của toàn bộ ứng dụng React
-// Vite sẽ đọc file này đầu tiên khi bạn chạy "npm run dev"
 // ============================================================
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-// CSS của Bootstrap — cung cấp các class như btn, card, container...
 import "bootstrap/dist/css/bootstrap.min.css";
-// JS của Bootstrap — cần thiết để navbar mobile (hamburger) hoạt động
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
-// Icon của Bootstrap — dùng class như bi-cart3, bi-person...
 import "bootstrap-icons/font/bootstrap-icons.css";
-
-// CSS tùy chỉnh của dự án (đặt sau Bootstrap để có thể ghi đè)
 import "./index.css";
 
-// Component gốc chứa toàn bộ ứng dụng
 import App from "./App";
 
-// Tìm thẻ <div id="root"> trong index.html rồi render App vào đó
+// Import Provider từ react-redux và store từ app/store.js
+// Provider: bao bọc toàn bộ app để mọi component đều dùng được Redux store
+// (giống AuthProvider, CartProvider nhưng là của Redux)
+import { Provider } from "react-redux";
+import { store } from "./app/store";
+
 createRoot(document.getElementById("root")).render(
-  // StrictMode giúp phát hiện lỗi tiềm ẩn trong quá trình phát triển
   <StrictMode>
-    <App />
+    {/* Provider truyền store xuống toàn bộ component tree */}
+    {/* Bất kỳ component nào cũng có thể dùng useSelector/useDispatch */}
+    <Provider store={store}>
+      <App />
+    </Provider>
   </StrictMode>
 );

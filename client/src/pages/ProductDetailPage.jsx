@@ -5,7 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useDispatch } from 'react-redux';
+import { addToCart } from '../features/cart/cartSlice';
 import ProductImage from '../components/ProductImage';
 import api from '../services/api';
 
@@ -14,7 +15,6 @@ function formatPrice(price) {
 }
 
 export default function ProductDetailPage({ product, onSelectRelated }) {
-  const { addToCart } = useCart();
   const navigate      = useNavigate();
 
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -40,7 +40,7 @@ export default function ProductDetailPage({ product, onSelectRelated }) {
   );
 
   function handleAddToCart() {
-    for (let i = 0; i < qty; i++) addToCart(product);
+    for (let i = 0; i < qty; i++) dispatch(addToCart(product));
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }
@@ -133,7 +133,7 @@ export default function ProductDetailPage({ product, onSelectRelated }) {
                   <p className="small fw-bold mb-1 mt-2">{item.name}</p>
                   <p className="text-primary fw-bold small mb-2">{formatPrice(item.price)}</p>
                   <button className="btn btn-outline-primary btn-sm"
-                    onClick={(e) => { e.stopPropagation(); addToCart(item); }}>
+                    onClick={(e) => { e.stopPropagation(); dispatch(addToCart(item)); }}>
                     + Thêm giỏ
                   </button>
                 </div>

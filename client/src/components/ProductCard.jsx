@@ -5,7 +5,9 @@
 // Hiển thị: ảnh, tên, giá, rating, nút Chi tiết + Thêm giỏ
 // ============================================================
 
-import { useCart } from "../context/CartContext";
+import { useDispatch } from "react-redux";
+import { addToCart } from "../features/cart/cartSlice";
+// useDispatch + action từ cartSlice thay thế useCart()
 import ProductImage from "./ProductImage";
 
 // Hàm định dạng số thành tiền VND (VD: 95000 → "95.000 ₫")
@@ -15,7 +17,8 @@ function formatPrice(price) {
 
 export default function ProductCard({ product, onSelect }) {
   // Lấy hàm addToCart từ CartContext
-  const { addToCart } = useCart();
+  // useDispatch: lấy hàm dispatch để gửi action đến Redux store
+  const dispatch = useDispatch();
 
   return (
     <div
@@ -95,7 +98,7 @@ export default function ProductCard({ product, onSelect }) {
           <button className="btn btn-outline-primary btn-sm flex-grow-1" onClick={() => onSelect(product)}>
             Chi tiết
           </button>
-          <button className="btn btn-primary btn-sm flex-grow-1" onClick={() => addToCart(product)}>
+          <button className="btn btn-primary btn-sm flex-grow-1" onClick={() => dispatch(addToCart(product))}>
             <i className="bi bi-cart-plus me-1"></i>Thêm
           </button>
         </div>

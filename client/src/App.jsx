@@ -13,7 +13,6 @@ import { useState } from "react";
 
 // Context providers — bao bọc app để mọi component con đều dùng được
 import { AuthProvider } from "./context/AuthContext";
-import { CartProvider } from "./context/CartContext";
 
 // Route guards — kiểm tra quyền truy cập trước khi render trang
 import ProtectedRoute from "./components/ProtectedRoute"; // cần đăng nhập
@@ -68,8 +67,6 @@ export default function App() {
     <BrowserRouter>
       {/* AuthProvider: cung cấp user, login, logout, grantAdmin... */}
       <AuthProvider>
-        {/* CartProvider: cung cấp cart, addToCart, removeItem... */}
-        <CartProvider>
           {/* Layout: flex column chiếm toàn chiều cao màn hình */}
           <div className="d-flex flex-column min-vh-100">
 
@@ -133,7 +130,6 @@ export default function App() {
             <Footer />
 
           </div>
-        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );
